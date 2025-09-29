@@ -13,10 +13,7 @@ socketio = None
 def init_socket_routes(sio):
     global socketio
     socketio = sio
-    from components.Live.Chess import Match as chessSockets
-
-    chessSockets.initializeChessSockets(sio)
-
+    
     @socketio.on('connect')
     def handle_connect():
         print('Connected')

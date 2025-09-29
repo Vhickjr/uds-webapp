@@ -17,7 +17,7 @@ def create_app():
     login_manager.login_view = 'auth.login'
     login_manager.init_app(app)
 
-    from . import views
+    from .views import views
     from .auth import auth
     from .models import User
 
