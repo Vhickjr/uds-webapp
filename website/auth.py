@@ -37,7 +37,7 @@ def logout():
 
 
 @auth.route('/sign-up', methods=['GET', 'POST'])
-def sign_up():
+def sign_up(): # rework this function such that only admin can create new user
 
     if request.method == 'POST':
         data = request.form
