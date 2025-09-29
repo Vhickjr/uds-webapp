@@ -3,7 +3,6 @@ from flask_login import login_user, login_required, logout_user, current_user
 from werkzeug.security import generate_password_hash, check_password_hash
 from .models import User
 from . import db
-from components.helpers import DBManager as dbM
 
 auth = Blueprint('auth', __name__)
 
@@ -72,17 +71,3 @@ def sign_up():
         data = request.form
 
     return render_template("signup.html", user=current_user)
-
-
-@auth.route('/follow/<username>', methods=['POST'])
-@login_required
-def follow_user(username):
-    if not current_user.is_authenticated:  # If using Flask-Login
-        return jsonify({"error": "Not logged in"}), 403
-    result = dbM.follow_user(username)
-    return redirect(request.referrer or url_for('main.home'))
-
-@auth.route('/games')
-@login_required
-def view_games():
-    return render_template("games/home.html", user=current_user)
