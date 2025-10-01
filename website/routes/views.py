@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, jsonify, request, url_for
 from flask_login import login_required, current_user
-from .models import *
+from ..models import *
 
-views = Blueprint('views', __name__)
+views = Blueprint("views", __name__)
 
-@views.route('/')
+
+@views.route("/")
 @login_required
 def home():
     return render_template("home.html")
