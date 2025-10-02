@@ -12,7 +12,15 @@ app = create_app()
 app.register_blueprint(socket.socket_bp)
 
 # to allow websocksts from JS later on
-socketio = SocketIO(app, cors_allowed_origins="*", async_mode="eventlet")
+socketio = SocketIO(
+    app,
+    cors_allowed_origins="*",
+    # async_mode="eventlet",
+    max_http_buffer_size=10e6,
+    async_mode="threading",  # Use threading for better performance
+    ping_timeout=60,
+    ping_interval=25,
+)
 socket.init_socket_routes(socketio)
 
 # should be fixed up in prod

@@ -1,13 +1,13 @@
-from collections import defaultdict
-from flask import Blueprint, Flask, session, request
+
+from flask import Blueprint, request
 from flask_socketio import emit
 import base64
-from .videorecorder import VideoRecorder, BufferedVideoRecorder
+from .videorecorder_thread import ThreadVideoRecorder
 
 # from os.path import getsize
 
 # Store connected users {socket_id: user_info}
-active_sessions = {}
+active_sessions: dict[str, ThreadVideoRecorder] = {}
 
 
 socket_bp = Blueprint("socket_bp", __name__)
@@ -24,7 +24,7 @@ def init_socket_routes(sio):
         print(f"Client connected: {session_id}")
 
         # Create new recorder for this session
-        active_sessions[session_id] = VideoRecorder(session_id)
+        active_sessions[session_id] = ThreadVideoRecorder(session_id)
 
         emit("server_message", "Connected to video stream server")
         emit("server_message", f"Session ID: {session_id}")
@@ -42,7 +42,7 @@ def init_socket_routes(sio):
         if session_id not in active_sessions:
             emit("error", "No active recording session")
             return
-
+        
         recorder = active_sessions[session_id]
         frame_number = data.get("frameNumber", 0)
         frame_data = data.get("frame")

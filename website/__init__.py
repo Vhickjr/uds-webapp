@@ -32,7 +32,7 @@ def create_app():
     @login_manager.user_loader
     def load_user(_id):
         return User.query.get(int(_id))
-    
+
     return app
 
 
