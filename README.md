@@ -116,18 +116,6 @@ The application should now be running at `http://localhost:3000`
 
 ---
 
-## Contributing
-
-Contributions are welcome! Please feel free to submit a Pull Request.
-
----
-
-## License
-
-This project is licensed under the MIT License.
-
----
-
 ## Contact
 
 For questions or support, please contact the Unilag Design Studio team.
