@@ -17,6 +17,7 @@ CREATE TABLE "users" (
   "email" varchar(256) UNIQUE NOT NULL,
   "phone" varchar(20) UNIQUE NOT NULL,
   "password" varchar(72) NOT NULL,
+  "is_active" bool NOT NULL DEFAULT true,
   "role" users_role_enum NOT NULL DEFAULT 'intern',
   "created_at" timestamptz DEFAULT (now()),
   "updated_at" timestamptz DEFAULT (now())

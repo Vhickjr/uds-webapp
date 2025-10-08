@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Enum
+from sqlalchemy import Column, String, Enum, Boolean
 
 from sqlalchemy.orm import relationship
 from api.v1.models.base_model import BaseTableModel
@@ -13,6 +13,7 @@ class User(BaseTableModel):
     email = Column(String(256), unique=True, nullable=False)
     phone = Column(String(20), unique=True, nullable=False)
     password = Column(String(72), nullable=False)
+    is_active = Column(Boolean, nullable=False, default=True)
 
     role = Column(
         Enum(UsersRoleEnum, name="users_role_enum"),
@@ -47,3 +48,7 @@ class User(BaseTableModel):
         obj_dict["requests"] = [x.id for x in self.user_requests]
 
         return obj_dict
+
+    @property
+    def is_admin(self):
+        return self.role == "admin"

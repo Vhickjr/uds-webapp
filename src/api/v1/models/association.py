@@ -128,6 +128,7 @@ class ApprovedGuestRequest(BaseTableModel):
     )
 
 
+# Unique index added - idx_guest_borrowed_item prevents duplicate active borrowing
 idx_guest_borrowed_item = Index(
     "idx_guest_borrowed_item",
     ApprovedGuestRequest.guest_id,
@@ -136,6 +137,7 @@ idx_guest_borrowed_item = Index(
     postgresql_where=text('"status" = \'approved\' AND "returned_at" IS NULL'),
 )
 
+# Admins will constantly query "show me all pending requests" or "show active rentals"
 idx_approved_guest_requests_status_active = Index(
     "idx_approved_guest_requests_status_active", ApprovedGuestRequest.status
 )
