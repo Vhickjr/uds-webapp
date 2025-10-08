@@ -13,7 +13,7 @@ class User(BaseTableModel):
     email = Column(String(256), unique=True, nullable=False)
     phone = Column(String(20), unique=True, nullable=False)
     password = Column(String(72), nullable=False)
-   
+
     role = Column(
         Enum(UsersRoleEnum, name="users_role_enum"),
         nullable=False,
@@ -21,12 +21,22 @@ class User(BaseTableModel):
     )
 
     user_requests = relationship(
-        "UserRequest", back_populates="user", foreign_keys="[UserRequest.user_id]", cascade="all, delete"
+        "UserRequest",
+        back_populates="user",
+        foreign_keys="[UserRequest.user_id]",
+        cascade="all, delete",
     )
 
-    reviewed_user_requests = relationship("UserRequest", back_populates="reviewer", foreign_keys="[UserRequest.reviewed_by]")
-    reviewed_guest_requests = relationship("GuestRequest", back_populates="reviewer", foreign_keys="[GuestRequest.reviewed_by]")
-
+    reviewed_user_requests = relationship(
+        "UserRequest",
+        back_populates="reviewer",
+        foreign_keys="[UserRequest.reviewed_by]",
+    )
+    reviewed_approved_guest_requests = relationship(
+        "ApprovedGuestRequest",
+        back_populates="reviewer",
+        foreign_keys="[ApprovedGuestRequest.reviewed_by]",
+    )
 
     def to_dict(self) -> dict:
         """returns a dictionary representation of the submission"""

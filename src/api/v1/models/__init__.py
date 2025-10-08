@@ -1,6 +1,7 @@
 from api.v1.models.association import (
-    UserRequest,
-    GuestRequest
+    ApprovedGuestRequest,
+    PendingGuestRequest,
+    UserRequest
 )
 
 from api.v1.models.item import Item

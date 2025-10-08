@@ -7,13 +7,16 @@ from api.v1.models.base_model import BaseTableModel
 class Guest(BaseTableModel):
     __tablename__ = "guests"
 
-    firstname = Column(String(50), nullable=False)
-    lastname = Column(String(50), nullable=False)
+    first_name = Column(String(50), nullable=False)
+    last_name = Column(String(50), nullable=False)
     email = Column(String(256), nullable=False)
     phone = Column(String(20), nullable=False)
     request = Column(Text, nullable=False)
 
     # Relationships
-    guest_requests = relationship(
-        "GuestRequest", back_populates="guest", cascade="all, delete"
+    pending_requests = relationship(
+        "PendingGuestRequest", back_populates="guest", cascade="all, delete"
+    )
+    approved_requests = relationship(
+        "ApprovedGuestRequest", back_populates="guest", cascade="all, delete"
     )

@@ -9,7 +9,9 @@ class Item(BaseTableModel):
     __tablename__ = "items"
 
     __table_args__ = (
-        CheckConstraint("total = available + damaged + in_use", name="valid_quantities"),
+        CheckConstraint(
+            "total = available + damaged + in_use", name="valid_quantities"
+        ),
     )
 
     name = Column(String(256), nullable=False)
@@ -25,4 +27,4 @@ class Item(BaseTableModel):
     in_use = Column(Integer, nullable=False, default=0)
 
     user_requests = relationship("UserRequest", back_populates="item")
-    guest_requests = relationship("GuestRequest", back_populates="item")
+    approved_guest_requests = relationship("GuestRequest", back_populates="item")
