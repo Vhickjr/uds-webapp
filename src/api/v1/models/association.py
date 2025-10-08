@@ -8,6 +8,7 @@ from sqlalchemy import (
     Integer,
     text,
     Text,
+    Index,
 )
 
 from sqlalchemy.orm import relationship
@@ -57,6 +58,19 @@ class UserRequest(BaseTableModel):
     reviewer = relationship(
         "User", back_populates="reviewed_user_requests", foreign_keys=[reviewed_by]
     )
+
+
+idx_user_requests_status_active = Index(
+    "idx_user_requests_status_active", UserRequest.status
+)
+
+idx_user_borrowed_item = Index(
+    "idx_user_borrowed_item",
+    UserRequest.user_id,
+    UserRequest.item_id,
+    unique=True,
+    postgresql_where=text('"status" = \'approved\' AND "returned_at" IS NULL'),
+)
 
 
 class ApprovedGuestRequest(BaseTableModel):
@@ -112,6 +126,19 @@ class ApprovedGuestRequest(BaseTableModel):
         back_populates="reviewed_approved_guest_requests",
         foreign_keys=[reviewed_by],
     )
+
+
+idx_guest_borrowed_item = Index(
+    "idx_guest_borrowed_item",
+    ApprovedGuestRequest.guest_id,
+    ApprovedGuestRequest.item_id,
+    unique=True,
+    postgresql_where=text('"status" = \'approved\' AND "returned_at" IS NULL'),
+)
+
+idx_approved_guest_requests_status_active = Index(
+    "idx_approved_guest_requests_status_active", ApprovedGuestRequest.status
+)
 
 
 class PendingGuestRequest(BaseTableModel):

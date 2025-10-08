@@ -82,7 +82,6 @@ async def get_root(request: Request) -> dict:
 
 
 if __name__ == "__main__":
-    create_database()
     uvicorn.run(
         "main:app",
         port=7001,
