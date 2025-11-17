@@ -47,3 +47,51 @@ This project is built with:
 - React
 - shadcn-ui
 - Tailwind CSS
+
+## Authentication Integration
+
+The frontend now integrates with the backend JWT authentication system.
+
+### Environment Variables
+
+Create a `.env` file in `uds-frontend` root:
+
+```
+VITE_API_URL=http://localhost:8000/api/v1
+```
+
+If omitted, it defaults to `http://localhost:8000/api/v1`.
+
+### Signup Fields
+
+The signup form expects: firstName, lastName, email, phone, password, role (admin | intern | guest). All but role are required.
+
+### Storage Keys
+
+```
+uds_auth_user   # JSON serialized user payload (without password)
+uds_auth_token  # JWT token string
+```
+
+### Auth Flow
+
+1. User submits signup or login.
+2. Backend returns `{ success: true, data: { user, token } }`.
+3. Token persisted; subsequent API calls attach `Authorization: Bearer <token>` automatically via `api.ts` helper.
+4. On app load, token is validated with `/auth/me`; invalid tokens are cleared.
+
+### Protected Routes
+
+Wrap protected pages with `<RequireAuth>`; unauthenticated users are redirected to `/login`.
+
+### API Helper
+
+`src/lib/api.ts` centralizes fetch logic and error handling.
+
+### Logout
+
+Calling `logout()` clears user + token from state and localStorage.
+
+### Extending
+
+Add refresh tokens, password reset, or role-based UI controls by extending `AuthContext` and backend routes.
