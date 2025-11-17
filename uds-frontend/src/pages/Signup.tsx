@@ -8,47 +8,60 @@ import { useAuth, Role } from "@/contexts/AuthContext";
 import { useToast } from "@/components/ui/use-toast";
 
 const Signup = () => {
-  const [username, setUsername] = useState("");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
-  const [role, setRole] = useState<Role>("user");
-  const { login } = useAuth();
+  const [role, setRole] = useState<Role>("intern");
+  const [submitting, setSubmitting] = useState(false);
+  const { signup } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const handleSignup = (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!username || !password) {
-      toast({ title: 'Missing fields', description: 'Please provide username and password.' });
+    if (!firstName || !lastName || !email || !phone || !password) {
+      toast({ title: 'Missing fields', description: 'All fields are required.' });
       return;
     }
-
+    setSubmitting(true);
     try {
-      const raw = localStorage.getItem('uds_users');
-      const users = raw ? JSON.parse(raw) as Array<{username:string,password:string,role:Role}> : [];
-      if (users.find(u => u.username === username)) {
-        toast({ title: 'User exists', description: 'Please choose another username or login.' });
-        return;
-      }
-      users.push({ username, password, role });
-      localStorage.setItem('uds_users', JSON.stringify(users));
-    } catch (e) {
-      // ignore
+      await signup({ firstName, lastName, email, phone, password, role });
+      toast({ title: 'Account created', description: 'You are now logged in.' });
+      navigate('/', { replace: true });
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Signup failed';
+      toast({ title: 'Signup failed', description: message });
+    } finally {
+      setSubmitting(false);
     }
-
-    // auto-login demo user
-    login(username, role);
-    toast({ title: 'Account created', description: 'You are now logged in.' });
-    navigate('/', { replace: true });
   };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-background">
       <form onSubmit={handleSignup} className="w-full max-w-md bg-card p-6 rounded-lg border border-border">
-        <h2 className="text-lg font-bold mb-4">Sign up (demo)</h2>
+        <h2 className="text-lg font-bold mb-4">Create account</h2>
+
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <Label htmlFor="firstName">First name</Label>
+            <Input id="firstName" value={firstName} onChange={(e) => setFirstName(e.target.value)} className="mt-1" />
+          </div>
+          <div>
+            <Label htmlFor="lastName">Last name</Label>
+            <Input id="lastName" value={lastName} onChange={(e) => setLastName(e.target.value)} className="mt-1" />
+          </div>
+        </div>
 
         <div className="mb-4">
-          <Label htmlFor="username">Username</Label>
-          <Input id="username" value={username} onChange={(e) => setUsername(e.target.value)} className="mt-1" />
+          <Label htmlFor="email">Email</Label>
+          <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="mt-1" />
+        </div>
+
+        <div className="mb-4">
+          <Label htmlFor="phone">Phone</Label>
+          <Input id="phone" value={phone} onChange={(e) => setPhone(e.target.value)} className="mt-1" />
         </div>
 
         <div className="mb-4">
@@ -63,14 +76,15 @@ const Signup = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="user">User</SelectItem>
-              <SelectItem value="backoffice">Backoffice (admin)</SelectItem>
+              <SelectItem value="intern">Intern</SelectItem>
+              <SelectItem value="admin">Admin</SelectItem>
+              <SelectItem value="guest">Guest</SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="flex gap-3">
-          <Button type="submit" className="flex-1 bg-primary text-primary-foreground">Create account</Button>
+          <Button disabled={submitting} type="submit" className="flex-1 bg-primary text-primary-foreground">{submitting ? 'Creating...' : 'Create account'}</Button>
         </div>
 
         <div className="mt-4 text-sm text-center">

@@ -5,7 +5,11 @@ import { env } from '../config/env.js';
 import { ApiError } from '../middleware/errorHandler.js';
 
 function sign(user: any) {
-  return jwt.sign({ id: user._id }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN });
+  // Ensure proper typing for secret and expiresIn to satisfy jsonwebtoken overloads
+  const secret: jwt.Secret = env.JWT_SECRET as unknown as jwt.Secret;
+  const expiresIn = env.JWT_EXPIRES_IN as unknown as jwt.SignOptions['expiresIn'];
+  const options: jwt.SignOptions = { expiresIn };
+  return jwt.sign({ id: user._id }, secret, options);
 }
 
 export async function signup(req: Request, res: Response) {
