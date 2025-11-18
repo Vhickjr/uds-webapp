@@ -5,7 +5,7 @@ dotenv.config({ path: path.resolve(process.cwd(), '.env') });
 
 export const env = {
   PORT: parseInt(process.env.PORT || '8000', 10),
-  MONGO_URI: process.env.MONGO_URI || 'mongodb://localhost:27017/uds-webapp',
+  MONGO_URI: process.env.MONGO_URI || 'mongodb+srv://vhickjr_db_user:Recovery2021@uds-cluster.pb65z6z.mongodb.net/?authMechanism=DEFAULT',
   JWT_SECRET: process.env.JWT_SECRET || 'dev_secret',
   JWT_EXPIRES_IN: process.env.JWT_EXPIRES_IN || '1d'
 };
