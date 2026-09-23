@@ -1,20 +1,30 @@
-import { ReactNode } from "react";
-import { Navigate, useLocation } from "react-router-dom";
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useAuth } from "@/contexts/AuthContext";
 
-export const RequireAuth = ({ children }: { children: ReactNode }) => {
+export function RequireAuth({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, loading } = useAuth();
-  const location = useLocation();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.replace("/login?from=/dashboard");
+    }
+  }, [isAuthenticated, loading, router]);
 
   if (loading) {
-    return <div className="p-6 text-center">Checking authentication...</div>;
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background text-foreground">
+        <p className="text-sm text-muted-foreground">Checking authentication...</p>
+      </div>
+    );
   }
 
-  if (!isAuthenticated) {
-    return <Navigate to="/login" state={{ from: location }} replace />;
-  }
+  if (!isAuthenticated) return null;
 
   return <>{children}</>;
-};
+}
 
 export default RequireAuth;

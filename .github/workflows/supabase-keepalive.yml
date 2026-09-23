@@ -1,0 +1,47 @@
+name: Supabase keep-alive
+
+# Free-tier Supabase projects auto-pause after 7 consecutive days with no API
+# requests, and un-pausing requires a human to log into the dashboard. During
+# semester breaks the studio can easily go quiet for longer than that, so this
+# workflow makes a lightweight request on a schedule to reset the idle clock.
+
+on:
+  schedule:
+    # Odd-numbered days at 03:17 UTC — roughly every 2 days, which leaves a wide
+    # margin under the 7-day pause threshold even if GitHub delays a run.
+    # (The odd minute avoids the top-of-hour queue where scheduled jobs back up.)
+    - cron: "17 3 */2 * *"
+  workflow_dispatch: # allows a manual run from the Actions tab
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase REST endpoint
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUPABASE_URL:-}" ] || [ -z "${SUPABASE_ANON_KEY:-}" ]; then
+            echo "::error::SUPABASE_URL and SUPABASE_ANON_KEY repository secrets are not set."
+            exit 1
+          fi
+
+          # GoTrue's health endpoint counts as project activity, needs no
+          # tables to exist, and reads no data. (PostgREST's /rest/v1/ root is
+          # not usable here — it now rejects publishable keys with 401.)
+          status=$(curl -sS -o /dev/null -w '%{http_code}' \
+            --max-time 30 --retry 3 --retry-delay 10 --retry-all-errors \
+            -H "apikey: ${SUPABASE_ANON_KEY}" \
+            "${SUPABASE_URL%/}/auth/v1/health")
+
+          echo "HTTP ${status}"
+
+          if [ "$status" -lt 200 ] || [ "$status" -ge 400 ]; then
+            echo "::error::Supabase ping failed with HTTP ${status} — the project may already be paused."
+            exit 1
+          fi
+
+          echo "Supabase project is awake; idle timer reset."

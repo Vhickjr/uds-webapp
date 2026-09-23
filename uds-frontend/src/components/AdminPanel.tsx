@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,74 +21,51 @@ export const AdminPanel = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [editingComponent, setEditingComponent] = useState<Component | null>(null);
+  const [formData, setFormData] = useState({ name: "", category: "", quantity: 0 });
 
-  const [formData, setFormData] = useState({
-    name: "",
-    category: "",
-    quantity: 0,
-  });
+  const resetForm = () => setFormData({ name: "", category: "", quantity: 0 });
 
-  const resetForm = () => {
-    setFormData({ name: "", category: "", quantity: 0 });
-  };
-
-  const handleAdd = () => {
+  const handleAdd = async () => {
     if (!formData.name || !formData.category || formData.quantity <= 0) {
       toast.error("Please fill all fields correctly");
       return;
     }
-
-    addComponent({
-      name: formData.name,
-      category: formData.category,
-      quantity: formData.quantity,
-    });
-    toast.success("Component added successfully");
-    resetForm();
-    setIsAddDialogOpen(false);
+    try {
+      await addComponent({ name: formData.name, category: formData.category, quantity: formData.quantity });
+      toast.success("Component added successfully");
+      resetForm();
+      setIsAddDialogOpen(false);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Add failed");
+    }
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!editingComponent || !formData.name || !formData.category || formData.quantity <= 0) {
       toast.error("Please fill all fields correctly");
       return;
     }
-
-    updateComponent(editingComponent.id, {
-      name: formData.name,
-      category: formData.category,
-      quantity: formData.quantity,
-    });
-    toast.success("Component updated successfully");
-    resetForm();
-    setIsEditDialogOpen(false);
-    setEditingComponent(null);
-  };
-
-  const handleDelete = (id: string) => {
-    deleteComponent(id);
-    toast.success("Component deleted successfully");
-  };
-
-  const handleReturn = (checkoutId: string) => {
-    returnComponent(checkoutId);
-    toast.success("Component returned successfully");
+    try {
+      await updateComponent(editingComponent.id, { name: formData.name, category: formData.category, quantity: formData.quantity });
+      toast.success("Component updated successfully");
+      resetForm();
+      setIsEditDialogOpen(false);
+      setEditingComponent(null);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Update failed");
+    }
   };
 
   const openEditDialog = (component: Component) => {
     setEditingComponent(component);
-    setFormData({
-      name: component.name,
-      category: component.category,
-      quantity: component.quantity,
-    });
+    setFormData({ name: component.name, category: component.category, quantity: component.quantity });
     setIsEditDialogOpen(true);
   };
 
   return (
     <div className="space-y-6">
       <UsageInsights />
-      {/* Pending return requests */}
+
       <Card className="component-card">
         <CardHeader>
           <CardTitle>Pending Return Requests</CardTitle>
@@ -103,34 +82,37 @@ export const AdminPanel = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {checkoutHistory.filter(r => r.returnRequested && !r.returned).length === 0 ? (
+              {checkoutHistory.filter((r) => r.returnRequested && !r.returned).length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground">No pending requests</TableCell>
                 </TableRow>
               ) : (
-                checkoutHistory.filter(r => r.returnRequested && !r.returned).map(r => (
-                  <TableRow key={r.id}>
-                    <TableCell className="font-medium">{r.componentName}</TableCell>
-                    <TableCell>{r.userName}</TableCell>
-                    <TableCell>{r.quantity}</TableCell>
-                    <TableCell>{r.checkoutDate}</TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-2">
-                        <Button size="sm" onClick={() => { returnComponent(r.id); toast.success('Return approved'); }}>
-                          Approve
-                        </Button>
-                        <Button size="sm" variant="ghost" onClick={() => { clearReturnRequest(r.id); toast('Request rejected'); }}>
-                          Reject
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
+                checkoutHistory
+                  .filter((r) => r.returnRequested && !r.returned)
+                  .map((r) => (
+                    <TableRow key={r.id}>
+                      <TableCell className="font-medium">{r.componentName}</TableCell>
+                      <TableCell>{r.userName}</TableCell>
+                      <TableCell>{r.quantity}</TableCell>
+                      <TableCell>{r.checkoutDate}</TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex justify-end gap-2">
+                          <Button size="sm" onClick={async () => { try { await returnComponent(r.id); toast.success("Return approved"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>
+                            Approve
+                          </Button>
+                          <Button size="sm" variant="ghost" onClick={async () => { try { await clearReturnRequest(r.id); toast("Request rejected"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>
+                            Reject
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))
               )}
             </TableBody>
           </Table>
         </CardContent>
       </Card>
+
       <div className="flex justify-between items-center">
         <div>
           <h2 className="text-2xl font-bold text-foreground">Component Management</h2>
@@ -150,45 +132,22 @@ export const AdminPanel = () => {
             <div className="space-y-4">
               <div>
                 <Label htmlFor="add-name">Component Name</Label>
-                <Input
-                  id="add-name"
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  className="bg-secondary border-border mt-1"
-                  placeholder="e.g., Resistor 1kΩ"
-                />
+                <Input id="add-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="bg-secondary border-border mt-1" placeholder="e.g., Resistor 1kΩ" />
               </div>
               <div>
                 <Label htmlFor="add-category">Category</Label>
-                <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                  <SelectTrigger className="bg-secondary border-border mt-1">
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map(cat => (
-                      <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                    ))}
-                  </SelectContent>
+                <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                  <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue placeholder="Select category" /></SelectTrigger>
+                  <SelectContent>{categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
                 </Select>
               </div>
               <div>
                 <Label htmlFor="add-quantity">Total Quantity</Label>
-                <Input
-                  id="add-quantity"
-                  type="number"
-                  min="1"
-                  value={formData.quantity}
-                  onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                  className="bg-secondary border-border mt-1"
-                />
+                <Input id="add-quantity" type="number" min="1" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })} className="bg-secondary border-border mt-1" />
               </div>
               <div className="flex gap-3 pt-4">
-                <Button variant="outline" onClick={() => { resetForm(); setIsAddDialogOpen(false); }} className="flex-1">
-                  Cancel
-                </Button>
-                <Button onClick={handleAdd} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
-                  Add Component
-                </Button>
+                <Button variant="outline" onClick={() => { resetForm(); setIsAddDialogOpen(false); }} className="flex-1">Cancel</Button>
+                <Button onClick={handleAdd} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">Add Component</Button>
               </div>
             </div>
           </DialogContent>
@@ -196,16 +155,14 @@ export const AdminPanel = () => {
       </div>
 
       <Card className="component-card">
-        <CardHeader>
-          <CardTitle>All Components</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>All Components</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Category</TableHead>
-                <TableHead>Total Qty</TableHead>
+                <TableHead>Total</TableHead>
                 <TableHead>Available</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -229,20 +186,8 @@ export const AdminPanel = () => {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex justify-end gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(component)}
-                      >
-                        <Pencil className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(component.id)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
+                      <Button variant="outline" size="sm" onClick={() => openEditDialog(component)}><Pencil className="h-4 w-4" /></Button>
+                      <Button variant="outline" size="sm" onClick={async () => { try { await deleteComponent(component.id); toast.success("Component deleted"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}><Trash2 className="h-4 w-4" /></Button>
                     </div>
                   </TableCell>
                 </TableRow>
@@ -253,17 +198,15 @@ export const AdminPanel = () => {
       </Card>
 
       <Card className="component-card">
-        <CardHeader>
-          <CardTitle>Checkout History</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Checkout History</CardTitle></CardHeader>
         <CardContent>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Component</TableHead>
                 <TableHead>User</TableHead>
-                <TableHead>Quantity</TableHead>
-                <TableHead>Checkout Date</TableHead>
+                <TableHead>Qty</TableHead>
+                <TableHead>Checkout</TableHead>
                 <TableHead>Expected Return</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
@@ -271,11 +214,7 @@ export const AdminPanel = () => {
             </TableHeader>
             <TableBody>
               {checkoutHistory.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground">
-                    No checkout history yet
-                  </TableCell>
-                </TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center text-muted-foreground">No checkout history yet</TableCell></TableRow>
               ) : (
                 checkoutHistory.map((checkout) => (
                   <TableRow key={checkout.id}>
@@ -285,21 +224,14 @@ export const AdminPanel = () => {
                     <TableCell>{checkout.checkoutDate}</TableCell>
                     <TableCell>{checkout.expectedReturn}</TableCell>
                     <TableCell>
-                      <span className={`inline-block px-2 py-1 rounded text-xs ${
-                        checkout.returned ? "bg-green-500/20 text-green-500" : "bg-orange-500/20 text-orange-500"
-                      }`}>
+                      <span className={`inline-block px-2 py-1 rounded text-xs ${checkout.returned ? "bg-green-500/20 text-green-500" : "bg-orange-500/20 text-orange-500"}`}>
                         {checkout.returned ? "Returned" : "Checked Out"}
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
                       {!checkout.returned && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleReturn(checkout.id)}
-                        >
-                          <RotateCcw className="h-4 w-4 mr-1" />
-                          Return
+                        <Button variant="outline" size="sm" onClick={async () => { try { await returnComponent(checkout.id); toast.success("Returned"); } catch (e) { toast.error(e instanceof Error ? e.message : "Failed"); } }}>
+                          <RotateCcw className="h-4 w-4 mr-1" />Return
                         </Button>
                       )}
                     </TableCell>
@@ -313,50 +245,26 @@ export const AdminPanel = () => {
 
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
         <DialogContent className="bg-card border-border">
-          <DialogHeader>
-            <DialogTitle>Edit Component</DialogTitle>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>Edit Component</DialogTitle></DialogHeader>
           <div className="space-y-4">
             <div>
               <Label htmlFor="edit-name">Component Name</Label>
-              <Input
-                id="edit-name"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="bg-secondary border-border mt-1"
-              />
+              <Input id="edit-name" value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} className="bg-secondary border-border mt-1" />
             </div>
             <div>
               <Label htmlFor="edit-category">Category</Label>
-              <Select value={formData.category} onValueChange={(value) => setFormData({ ...formData, category: value })}>
-                <SelectTrigger className="bg-secondary border-border mt-1">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {categories.map(cat => (
-                    <SelectItem key={cat} value={cat}>{cat}</SelectItem>
-                  ))}
-                </SelectContent>
+              <Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}>
+                <SelectTrigger className="bg-secondary border-border mt-1"><SelectValue /></SelectTrigger>
+                <SelectContent>{categories.map((cat) => <SelectItem key={cat} value={cat}>{cat}</SelectItem>)}</SelectContent>
               </Select>
             </div>
             <div>
               <Label htmlFor="edit-quantity">Total Quantity</Label>
-              <Input
-                id="edit-quantity"
-                type="number"
-                min="1"
-                value={formData.quantity}
-                onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })}
-                className="bg-secondary border-border mt-1"
-              />
+              <Input id="edit-quantity" type="number" min="1" value={formData.quantity} onChange={(e) => setFormData({ ...formData, quantity: parseInt(e.target.value) || 0 })} className="bg-secondary border-border mt-1" />
             </div>
             <div className="flex gap-3 pt-4">
-              <Button variant="outline" onClick={() => { resetForm(); setIsEditDialogOpen(false); setEditingComponent(null); }} className="flex-1">
-                Cancel
-              </Button>
-              <Button onClick={handleEdit} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
-                Save Changes
-              </Button>
+              <Button variant="outline" onClick={() => { resetForm(); setIsEditDialogOpen(false); setEditingComponent(null); }} className="flex-1">Cancel</Button>
+              <Button onClick={handleEdit} className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">Save Changes</Button>
             </div>
           </div>
         </DialogContent>

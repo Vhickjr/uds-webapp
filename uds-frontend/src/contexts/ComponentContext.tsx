@@ -1,4 +1,10 @@
-import { createContext, useContext, useState, useEffect, ReactNode } from "react";
+"use client";
+
+import {
+  createContext, useCallback, useContext, useEffect, useState, type ReactNode,
+} from "react";
+import { getSupabase } from "@/lib/supabase";
+import { useAuth } from "@/contexts/AuthContext";
 
 export interface Component {
   id: string;
@@ -13,165 +19,202 @@ export interface CheckoutRecord {
   id: string;
   componentId: string;
   componentName: string;
+  userId: string;
   userName: string;
   quantity: number;
   checkoutDate: string;
   expectedReturn: string;
   returned: boolean;
-  // when a user requests a return, admin must approve to finalize
   returnRequested?: boolean;
 }
 
 interface ComponentContextType {
   components: Component[];
   checkoutHistory: CheckoutRecord[];
-  addComponent: (component: Omit<Component, "id" | "available" | "status">) => void;
-  updateComponent: (id: string, component: Partial<Component>) => void;
-  deleteComponent: (id: string) => void;
-  checkoutComponent: (componentId: string, userName: string, quantity: number, expectedReturn: string) => void;
-  returnComponent: (checkoutId: string) => void;
-  requestReturn: (checkoutId: string) => void;
-  clearReturnRequest: (checkoutId: string) => void;
+  loading: boolean;
+  error: string | null;
+  refresh: () => Promise<void>;
+  addComponent: (c: Omit<Component, "id" | "available" | "status">) => Promise<void>;
+  updateComponent: (id: string, updates: Partial<Component>) => Promise<void>;
+  deleteComponent: (id: string) => Promise<void>;
+  checkoutComponent: (
+    componentId: string, quantity: number, expectedReturn: string
+  ) => Promise<{ ok: boolean; error?: string }>;
+  returnComponent: (checkoutId: string) => Promise<void>;
+  requestReturn: (checkoutId: string) => Promise<void>;
+  clearReturnRequest: (checkoutId: string) => Promise<void>;
 }
 
 const ComponentContext = createContext<ComponentContextType | undefined>(undefined);
 
-const initialComponents: Component[] = [
-  { id: "1", name: "Resistor 1kΩ", category: "Resistors", quantity: 100, available: 85, status: "available" },
-  { id: "2", name: "Capacitor 10µF", category: "Capacitors", quantity: 50, available: 12, status: "low-stock" },
-  { id: "3", name: "Arduino Uno", category: "Microcontrollers", quantity: 10, available: 4, status: "checked-out" },
-  { id: "4", name: "LED Red 5mm", category: "LEDs", quantity: 200, available: 180, status: "available" },
-  { id: "5", name: "555 Timer IC", category: "ICs", quantity: 30, available: 25, status: "available" },
-  { id: "6", name: "Breadboard", category: "Tools", quantity: 15, available: 8, status: "checked-out" },
-];
+interface ComponentRow {
+  id: string; name: string; category: string;
+  quantity: number; available: number; status: Component["status"];
+}
 
-const updateComponentStatus = (component: Component): Component => {
-  const percentageAvailable = (component.available / component.quantity) * 100;
-  let status: Component["status"] = "available";
-  
-  if (component.available === 0) {
-    status = "checked-out";
-  } else if (percentageAvailable < 30) {
-    status = "low-stock";
-  } else if (component.available < component.quantity) {
-    status = "checked-out";
-  }
-  
-  return { ...component, status };
-};
+const toComponent = (r: ComponentRow): Component => ({
+  id: r.id,
+  name: r.name,
+  category: r.category ?? "",
+  quantity: r.quantity,
+  available: r.available,
+  status: r.status,
+});
+
+interface CheckoutRow {
+  id: string; component_id: string; user_id: string; quantity: number;
+  checkout_date: string; expected_return: string;
+  returned: boolean; return_requested: boolean;
+  components?: { name: string } | null;
+  profiles?: { first_name: string | null; last_name: string | null } | null;
+}
+
+const toCheckout = (r: CheckoutRow): CheckoutRecord => ({
+  id: r.id,
+  componentId: r.component_id,
+  componentName: r.components?.name ?? "",
+  userId: r.user_id,
+  userName: [r.profiles?.first_name, r.profiles?.last_name].filter(Boolean).join(" "),
+  quantity: r.quantity,
+  checkoutDate: r.checkout_date,
+  expectedReturn: r.expected_return,
+  returned: r.returned,
+  returnRequested: r.return_requested,
+});
+
+const CHECKOUT_SELECT =
+  "id, component_id, user_id, quantity, checkout_date, expected_return, returned, return_requested, components(name), profiles(first_name, last_name)";
 
 export const ComponentProvider = ({ children }: { children: ReactNode }) => {
-  const [components, setComponents] = useState<Component[]>(() => {
+  const { isAuthenticated } = useAuth();
+  const [components, setComponents] = useState<Component[]>([]);
+  const [checkoutHistory, setCheckoutHistory] = useState<CheckoutRecord[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const refresh = useCallback(async () => {
+    const supabase = getSupabase();
+    if (!supabase || !isAuthenticated) {
+      setComponents([]);
+      setCheckoutHistory([]);
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
     try {
-      const raw = localStorage.getItem('uds_components');
-      return raw ? JSON.parse(raw) as Component[] : initialComponents;
+      const [compRes, coRes] = await Promise.all([
+        // The view adds the derived `status` column.
+        supabase.from("components_with_status").select("*").order("name"),
+        supabase.from("checkouts").select(CHECKOUT_SELECT).order("checkout_date", { ascending: false }),
+      ]);
+
+      if (compRes.error) throw new Error(compRes.error.message);
+      if (coRes.error) throw new Error(coRes.error.message);
+
+      setComponents((compRes.data as ComponentRow[]).map(toComponent));
+      setCheckoutHistory((coRes.data as unknown as CheckoutRow[]).map(toCheckout));
     } catch (e) {
-      return initialComponents;
+      setError(e instanceof Error ? e.message : "Failed to load inventory");
+    } finally {
+      setLoading(false);
     }
-  });
+  }, [isAuthenticated]);
 
-  const [checkoutHistory, setCheckoutHistory] = useState<CheckoutRecord[]>(() => {
-    try {
-      const raw = localStorage.getItem('uds_checkoutHistory');
-      return raw ? JSON.parse(raw) as CheckoutRecord[] : [];
-    } catch (e) {
-      return [];
-    }
-  });
+  useEffect(() => { void refresh(); }, [refresh]);
 
-  // persist to localStorage for frontend-only demo (survives reloads)
-  useEffect(() => {
-    try { localStorage.setItem('uds_components', JSON.stringify(components)); } catch (e) {}
-  }, [components]);
+  const addComponent = useCallback(
+    async (data: Omit<Component, "id" | "available" | "status">) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase unavailable");
+      const { error } = await supabase.from("components").insert({
+        name: data.name,
+        category: data.category,
+        quantity: data.quantity,
+        available: data.quantity,
+      });
+      if (error) throw new Error(error.message);
+      await refresh();
+    },
+    [refresh]
+  );
 
-  useEffect(() => {
-    try { localStorage.setItem('uds_checkoutHistory', JSON.stringify(checkoutHistory)); } catch (e) {}
-  }, [checkoutHistory]);
+  const updateComponent = useCallback(async (id: string, updates: Partial<Component>) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase unavailable");
 
-  const addComponent = (componentData: Omit<Component, "id" | "available" | "status">) => {
-    const newComponent: Component = {
-      ...componentData,
-      id: Date.now().toString(),
-      available: componentData.quantity,
-      status: "available",
-    };
-    setComponents([...components, newComponent]);
-  };
+    const row: Record<string, unknown> = {};
+    if (updates.name !== undefined) row.name = updates.name;
+    if (updates.category !== undefined) row.category = updates.category;
+    if (updates.quantity !== undefined) row.quantity = updates.quantity;
+    if (updates.available !== undefined) row.available = updates.available;
 
-  const updateComponent = (id: string, updates: Partial<Component>) => {
-    setComponents(components.map(c => {
-      if (c.id === id) {
-        const updated = { ...c, ...updates };
-        return updateComponentStatus(updated);
-      }
-      return c;
-    }));
-  };
+    const { error } = await supabase.from("components").update(row).eq("id", id);
+    if (error) throw new Error(error.message);
+    await refresh();
+  }, [refresh]);
 
-  const deleteComponent = (id: string) => {
-    setComponents(components.filter(c => c.id !== id));
-  };
+  const deleteComponent = useCallback(async (id: string) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase unavailable");
+    const { error } = await supabase.from("components").delete().eq("id", id);
+    if (error) throw new Error(error.message);
+    await refresh();
+  }, [refresh]);
 
-  const checkoutComponent = (componentId: string, userName: string, quantity: number, expectedReturn: string) => {
-    const component = components.find(c => c.id === componentId);
-    if (!component) return;
+  /** Borrow: goes through the RPC so the stock decrement and ledger row are atomic. */
+  const checkoutComponent = useCallback(
+    async (componentId: string, quantity: number, expectedReturn: string) => {
+      const supabase = getSupabase();
+      if (!supabase) return { ok: false, error: "Supabase unavailable" };
 
-    const checkoutRecord: CheckoutRecord = {
-      id: Date.now().toString(),
-      componentId,
-      componentName: component.name,
-      userName,
-      quantity,
-      checkoutDate: new Date().toISOString().split('T')[0],
-      expectedReturn,
-      returned: false,
-    };
+      const { error } = await supabase.rpc("checkout_component", {
+        p_component_id: componentId,
+        p_quantity: quantity,
+        p_expected_return: expectedReturn,
+      });
 
-    setCheckoutHistory([checkoutRecord, ...checkoutHistory]);
-    
-    const newAvailable = component.available - quantity;
-    updateComponent(componentId, { available: newAvailable });
-  };
+      if (error) return { ok: false, error: error.message };
+      await refresh();
+      return { ok: true };
+    },
+    [refresh]
+  );
 
-  const returnComponent = (checkoutId: string) => {
-    const checkout = checkoutHistory.find(c => c.id === checkoutId);
-    if (!checkout) return;
+  /** Return: RPC restores stock and closes the checkout in one transaction. */
+  const returnComponent = useCallback(async (checkoutId: string) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error("Supabase unavailable");
+    const { error } = await supabase.rpc("return_checkout", { p_checkout_id: checkoutId });
+    if (error) throw new Error(error.message);
+    await refresh();
+  }, [refresh]);
 
-    setCheckoutHistory(checkoutHistory.map(c => 
-      c.id === checkoutId ? { ...c, returned: true } : c
-    ));
+  const setReturnRequested = useCallback(
+    async (checkoutId: string, value: boolean) => {
+      const supabase = getSupabase();
+      if (!supabase) throw new Error("Supabase unavailable");
+      const { error } = await supabase
+        .from("checkouts")
+        .update({ return_requested: value })
+        .eq("id", checkoutId);
+      if (error) throw new Error(error.message);
+      await refresh();
+    },
+    [refresh]
+  );
 
-    const component = components.find(c => c.id === checkout.componentId);
-    if (component) {
-      const newAvailable = Math.min(component.available + checkout.quantity, component.quantity);
-      updateComponent(checkout.componentId, { available: newAvailable });
-    }
-  };
-
-  const requestReturn = (checkoutId: string) => {
-    setCheckoutHistory(checkoutHistory.map(c =>
-      c.id === checkoutId ? { ...c, returnRequested: true } : c
-    ));
-  };
-
-  const clearReturnRequest = (checkoutId: string) => {
-    setCheckoutHistory(checkoutHistory.map(c =>
-      c.id === checkoutId ? { ...c, returnRequested: false } : c
-    ));
-  };
+  const requestReturn = useCallback(
+    (id: string) => setReturnRequested(id, true), [setReturnRequested]);
+  const clearReturnRequest = useCallback(
+    (id: string) => setReturnRequested(id, false), [setReturnRequested]);
 
   return (
     <ComponentContext.Provider
       value={{
-        components,
-        checkoutHistory,
-        addComponent,
-        updateComponent,
-        deleteComponent,
-        checkoutComponent,
-          returnComponent,
-          requestReturn,
-          clearReturnRequest,
+        components, checkoutHistory, loading, error, refresh,
+        addComponent, updateComponent, deleteComponent,
+        checkoutComponent, returnComponent, requestReturn, clearReturnRequest,
       }}
     >
       {children}
@@ -180,9 +223,9 @@ export const ComponentProvider = ({ children }: { children: ReactNode }) => {
 };
 
 export const useComponents = () => {
-  const context = useContext(ComponentContext);
-  if (!context) {
-    throw new Error("useComponents must be used within ComponentProvider");
-  }
-  return context;
+  const ctx = useContext(ComponentContext);
+  if (!ctx) throw new Error("useComponents must be used within ComponentProvider");
+  return ctx;
 };
+
+export default ComponentContext;
