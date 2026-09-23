@@ -2,7 +2,11 @@ import type { Config } from "tailwindcss";
 
 export default {
   darkMode: ["class"],
-  content: ["./pages/**/*.{ts,tsx}", "./components/**/*.{ts,tsx}", "./app/**/*.{ts,tsx}", "./src/**/*.{ts,tsx}"],
+  content: [
+    "./src/pages/**/*.{ts,tsx}",
+    "./src/components/**/*.{ts,tsx}",
+    "./src/app/**/*.{ts,tsx}",
+  ],
   prefix: "",
   theme: {
     container: {
@@ -57,28 +61,37 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        // UNILAG Design Studio brand palette, sampled from the live site + logo
+        brand: {
+          oxblood: "hsl(var(--brand-oxblood))",
+          maroon: "hsl(var(--brand-maroon))",
+          gold: "hsl(var(--brand-gold))",
+          cream: "hsl(var(--brand-cream))",
+          sand: "hsl(var(--brand-sand))",
+          butter: "hsl(var(--brand-butter))",
+          clay: "hsl(var(--brand-clay))",
+          ink: "hsl(var(--brand-ink))",
+        },
+      },
+      fontFamily: {
+        sans: ["var(--font-raleway)", "Raleway", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Gellix", "Arial", "sans-serif"],
       },
       borderRadius: {
         lg: "var(--radius)",
         md: "calc(var(--radius) - 2px)",
         sm: "calc(var(--radius) - 4px)",
+        panel: "24px",
+        pill: "999px",
       },
       keyframes: {
         "accordion-down": {
-          from: {
-            height: "0",
-          },
-          to: {
-            height: "var(--radix-accordion-content-height)",
-          },
+          from: { height: "0" },
+          to: { height: "var(--radix-accordion-content-height)" },
         },
         "accordion-up": {
-          from: {
-            height: "var(--radix-accordion-content-height)",
-          },
-          to: {
-            height: "0",
-          },
+          from: { height: "var(--radix-accordion-content-height)" },
+          to: { height: "0" },
         },
       },
       animation: {

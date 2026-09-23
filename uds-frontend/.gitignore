@@ -8,8 +8,20 @@ pnpm-debug.log*
 lerna-debug.log*
 
 node_modules
+
+# Next.js
+.next
+out
+next-env.d.ts
+
+# Production build
 dist
-dist-ssr
+build
+
+# Env
+.env
+.env.local
+.env.*.local
 *.local
 
 # Editor directories and files
@@ -23,4 +35,8 @@ dist-ssr
 *.sln
 *.sw?
 
+# Deploy
 .vercel
+
+# Scratch dir for verification builds
+.next-verify

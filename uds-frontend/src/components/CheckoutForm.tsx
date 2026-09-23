@@ -1,11 +1,13 @@
+"use client";
+
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { useComponents } from "@/contexts/ComponentContext";
 import { useAuth } from "@/contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
 
 interface CheckoutFormProps {
   component: {
@@ -19,47 +21,42 @@ interface CheckoutFormProps {
 export const CheckoutForm = ({ component, onClose }: CheckoutFormProps) => {
   const { checkoutComponent } = useComponents();
   const { isAuthenticated, user } = useAuth();
-  const navigate = useNavigate();
-  const [userName, setUserName] = useState("");
+  const router = useRouter();
+  const [userName, setUserName] = useState(user ? `${user.firstName} ${user.lastName}` : "");
   const [quantity, setQuantity] = useState(1);
   const [expectedReturn, setExpectedReturn] = useState("");
 
-    const handleSubmit = (e: React.FormEvent) => {
-      e.preventDefault();
-      if (!isAuthenticated) {
-        // if not logged in, redirect to login so user can sign in
-        navigate("/login");
-        return;
-      }
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!isAuthenticated) {
+      router.push("/login");
+      return;
+    }
 
-      // use authenticated username immediately if available, otherwise use typed userName
-      const effectiveUserName = user?.username && user?.username.length > 0 ? user.username : userName;
+    if (!userName || !expectedReturn) {
+      toast.error("Please fill in all fields");
+      return;
+    }
 
-      if (!effectiveUserName || !expectedReturn) {
-        toast.error("Please fill in all fields");
-        return;
-      }
+    if (quantity > component.available) {
+      toast.error(`Only ${component.available} units available`);
+      return;
+    }
 
-      if (quantity > component.available) {
-        toast.error(`Only ${component.available} units available`);
-        return;
-      }
-
-      checkoutComponent(component.id, effectiveUserName, quantity, expectedReturn);
-      toast.success(`${component.name} checked out successfully!`);
-      onClose();
-    };
+    const result = await checkoutComponent(component.id, quantity, expectedReturn);
+    if (!result.ok) {
+      toast.error(result.error ?? "Checkout failed");
+      return;
+    }
+    toast.success(`${component.name} checked out successfully!`);
+    onClose();
+  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
         <Label htmlFor="component" className="text-foreground">Component</Label>
-        <Input
-          id="component"
-          value={component.name}
-          disabled
-          className="bg-secondary border-border mt-1"
-        />
+        <Input id="component" value={component.name} disabled className="bg-secondary border-border mt-1" />
       </div>
 
       <div>
@@ -86,9 +83,7 @@ export const CheckoutForm = ({ component, onClose }: CheckoutFormProps) => {
           className="bg-secondary border-border mt-1"
           required
         />
-        <p className="text-xs text-muted-foreground mt-1">
-          {component.available} units available
-        </p>
+        <p className="text-xs text-muted-foreground mt-1">{component.available} units available</p>
       </div>
 
       <div>
@@ -104,18 +99,10 @@ export const CheckoutForm = ({ component, onClose }: CheckoutFormProps) => {
       </div>
 
       <div className="flex gap-3 pt-4">
-        <Button
-          type="button"
-          variant="outline"
-          onClick={onClose}
-          className="flex-1"
-        >
+        <Button type="button" variant="outline" onClick={onClose} className="flex-1">
           Cancel
         </Button>
-        <Button
-          type="submit"
-          className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground"
-        >
+        <Button type="submit" className="flex-1 bg-primary hover:bg-primary/90 text-primary-foreground">
           Confirm Checkout
         </Button>
       </div>

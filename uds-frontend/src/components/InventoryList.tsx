@@ -1,3 +1,5 @@
+"use client";
+
 import { useState } from "react";
 import { ComponentCard } from "./ComponentCard";
 import { Input } from "@/components/ui/input";
@@ -16,9 +18,9 @@ export const InventoryList = () => {
   const [selectedComponent, setSelectedComponent] = useState<Component | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  const categories = ["all", ...Array.from(new Set(components.map(c => c.category)))];
+  const categories = ["all", ...Array.from(new Set(components.map((c) => c.category)))];
 
-  const filteredComponents = components.filter(component => {
+  const filteredComponents = components.filter((component) => {
     const matchesSearch = component.name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesCategory = categoryFilter === "all" || component.category === categoryFilter;
     return matchesSearch && matchesCategory;
@@ -45,7 +47,7 @@ export const InventoryList = () => {
               <DialogHeader>
                 <DialogTitle>Scan Component QR</DialogTitle>
               </DialogHeader>
-              <QRScanner onClose={() => { /* dialog will close by parent */ }} />
+              <QRScanner />
             </DialogContent>
           </Dialog>
         </div>
@@ -66,7 +68,7 @@ export const InventoryList = () => {
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
-            {categories.map(cat => (
+            {categories.map((cat) => (
               <SelectItem key={cat} value={cat}>
                 {cat === "all" ? "All Categories" : cat}
               </SelectItem>
@@ -76,12 +78,8 @@ export const InventoryList = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {filteredComponents.map(component => (
-          <ComponentCard
-            key={component.id}
-            {...component}
-            onCheckout={() => handleCheckout(component)}
-          />
+        {filteredComponents.map((component) => (
+          <ComponentCard key={component.id} {...component} onCheckout={() => handleCheckout(component)} />
         ))}
       </div>
 
@@ -91,10 +89,7 @@ export const InventoryList = () => {
             <DialogTitle>Checkout Component</DialogTitle>
           </DialogHeader>
           {selectedComponent && (
-            <CheckoutForm 
-              component={selectedComponent}
-              onClose={() => setDialogOpen(false)}
-            />
+            <CheckoutForm component={selectedComponent} onClose={() => setDialogOpen(false)} />
           )}
         </DialogContent>
       </Dialog>

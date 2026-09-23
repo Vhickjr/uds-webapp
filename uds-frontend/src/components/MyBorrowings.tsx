@@ -1,3 +1,5 @@
+"use client";
+
 import { useComponents } from "@/contexts/ComponentContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,11 +11,16 @@ export const MyBorrowings = () => {
   const { checkoutHistory, requestReturn } = useComponents();
   const { user } = useAuth();
 
-  const myRecords = checkoutHistory.filter(r => r.userName === user?.username);
+  // Match on id — names are not unique and can change.
+  const myRecords = checkoutHistory.filter((r) => r.userId === user?._id);
 
-  const handleRequestReturn = (id: string) => {
-    requestReturn(id);
-    toast.success("Return requested — awaiting admin approval");
+  const handleRequestReturn = async (id: string) => {
+    try {
+      await requestReturn(id);
+      toast.success("Return requested");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Request failed");
+    }
   };
 
   return (
@@ -42,10 +49,12 @@ export const MyBorrowings = () => {
             <TableBody>
               {myRecords.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground">No records found</TableCell>
+                  <TableCell colSpan={6} className="text-center text-muted-foreground">
+                    No records found
+                  </TableCell>
                 </TableRow>
               ) : (
-                myRecords.map(r => (
+                myRecords.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell className="font-medium">{r.componentName}</TableCell>
                     <TableCell>{r.quantity}</TableCell>
@@ -62,7 +71,9 @@ export const MyBorrowings = () => {
                     </TableCell>
                     <TableCell className="text-right">
                       {!r.returned && !r.returnRequested && (
-                        <Button variant="outline" size="sm" onClick={() => handleRequestReturn(r.id)}>Request Return</Button>
+                        <Button variant="outline" size="sm" onClick={() => handleRequestReturn(r.id)}>
+                          Request Return
+                        </Button>
                       )}
                     </TableCell>
                   </TableRow>

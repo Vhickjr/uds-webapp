@@ -2,6 +2,7 @@ import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
 export enum UserRole {
+  superadmin = 'superadmin',
   admin = 'admin',
   intern = 'intern',
   guest = 'guest'

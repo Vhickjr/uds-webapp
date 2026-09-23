@@ -1,3 +1,5 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useComponents } from "@/contexts/ComponentContext";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
@@ -7,17 +9,16 @@ const getLastNDates = (n: number) => {
   for (let i = n - 1; i >= 0; i--) {
     const d = new Date();
     d.setDate(d.getDate() - i);
-    days.push(d.toISOString().split('T')[0]);
+    days.push(d.toISOString().split("T")[0]);
   }
   return days;
 };
 
 export const UsageInsights = () => {
-  const { checkoutHistory, components } = useComponents();
+  const { checkoutHistory } = useComponents();
 
-  // Top 5 most-borrowed items (by total quantity)
   const counts: Record<string, number> = {};
-  checkoutHistory.forEach(r => {
+  checkoutHistory.forEach((r) => {
     counts[r.componentName] = (counts[r.componentName] || 0) + r.quantity;
   });
 
@@ -26,15 +27,13 @@ export const UsageInsights = () => {
     .slice(0, 5)
     .map(([name, qty]) => ({ name, qty }));
 
-  // Checkouts over last 7 days
   const last7 = getLastNDates(7);
   const dateMap: Record<string, number> = {};
-  last7.forEach(d => (dateMap[d] = 0));
-  checkoutHistory.forEach(r => {
-    // checkoutDate is YYYY-MM-DD per context
+  last7.forEach((d) => (dateMap[d] = 0));
+  checkoutHistory.forEach((r) => {
     if (r.checkoutDate in dateMap) dateMap[r.checkoutDate] += r.quantity;
   });
-  const series = last7.map(d => ({ date: d, value: dateMap[d] || 0 }));
+  const series = last7.map((d) => ({ date: d, value: dateMap[d] || 0 }));
 
   return (
     <div className="space-y-6">
@@ -48,9 +47,12 @@ export const UsageInsights = () => {
               <div className="text-muted-foreground">No borrow records yet</div>
             ) : (
               <ol className="list-decimal pl-5">
-                {topItems.map(item => (
+                {topItems.map((item) => (
                   <li key={item.name} className="mb-1">
-                    <div className="flex justify-between"><span>{item.name}</span><span className="text-muted-foreground">{item.qty}</span></div>
+                    <div className="flex justify-between">
+                      <span>{item.name}</span>
+                      <span className="text-muted-foreground">{item.qty}</span>
+                    </div>
                   </li>
                 ))}
               </ol>

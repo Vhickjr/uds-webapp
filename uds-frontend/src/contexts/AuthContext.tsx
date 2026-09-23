@@ -1,7 +1,12 @@
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from "react";
-import { authApi } from "@/lib/api";
+"use client";
 
-export type Role = "admin" | "intern" | "guest"; // backend roles
+import {
+  createContext, useCallback, useContext, useEffect, useState, type ReactNode,
+} from "react";
+import type { Session, User as SupabaseUser } from "@supabase/supabase-js";
+import { getSupabase, isSupabaseConfigured } from "@/lib/supabase";
+
+export type Role = "superadmin" | "admin" | "intern" | "guest";
 
 export interface AuthUser {
   _id: string;
@@ -12,153 +17,186 @@ export interface AuthUser {
   role: Role;
 }
 
-interface AuthContextType {
-  user: AuthUser | null;
-  token: string | null;
-  loading: boolean;
-  signup: (payload: SignupPayload) => Promise<void>;
-  login: (email: string, password: string) => Promise<void>;
-  logout: () => void;
-  refreshMe: () => Promise<void>;
-  isAuthenticated: boolean;
-}
-
-interface SignupPayload extends Record<string, unknown> {
+interface SignupPayload {
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
   password: string;
+  /** Ignored by the server — every signup lands as 'intern'. See note below. */
   role?: Role;
+}
+
+interface AuthContextType {
+  user: AuthUser | null;
+  session: Session | null;
+  loading: boolean;
+  configError: string | null;
+  signup: (payload: SignupPayload) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  logout: () => Promise<void>;
+  refreshMe: () => Promise<void>;
+  isAuthenticated: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-const USER_KEY = "uds_auth_user";
-const TOKEN_KEY = "uds_auth_token";
+const isRole = (r: unknown): r is Role =>
+  r === "superadmin" || r === "admin" || r === "intern" || r === "guest";
+
+interface ProfileRow {
+  id: string;
+  first_name: string | null;
+  last_name: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+}
+
+const toAuthUser = (row: ProfileRow, fallbackEmail: string): AuthUser => ({
+  _id: row.id,
+  firstName: row.first_name ?? "",
+  lastName: row.last_name ?? "",
+  email: row.email ?? fallbackEmail,
+  phone: row.phone ?? "",
+  role: isRole(row.role) ? row.role : "guest",
+});
+
+/**
+ * Builds a user from auth metadata alone. Used when the profiles row hasn't
+ * appeared yet (the handle_new_user trigger races the first read after signup)
+ * so the UI has a name to show. Role deliberately defaults to the least
+ * privileged value — never infer privilege from client-held metadata.
+ */
+const fromAuthMetadata = (u: SupabaseUser): AuthUser => {
+  const meta = (u.user_metadata ?? {}) as Record<string, unknown>;
+  return {
+    _id: u.id,
+    firstName: typeof meta.first_name === "string" ? meta.first_name : "",
+    lastName: typeof meta.last_name === "string" ? meta.last_name : "",
+    email: u.email ?? "",
+    phone: typeof meta.phone === "string" ? meta.phone : "",
+    role: "guest",
+  };
+};
 
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [user, setUser] = useState<AuthUser | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Load persisted auth
-  useEffect(() => {
-    try {
-      const rawUser = localStorage.getItem(USER_KEY);
-      const rawToken = localStorage.getItem(TOKEN_KEY);
-      if (rawUser && rawToken) {
-        setUser(JSON.parse(rawUser));
-        setToken(rawToken);
-      }
-    } catch {/* ignore */}
-    finally {
-      setLoading(false);
+  const configError = isSupabaseConfigured
+    ? null
+    : "Supabase is not configured. Set NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local.";
+
+  /** Loads the profiles row for a session user; falls back to auth metadata. */
+  const loadProfile = useCallback(async (authUser: SupabaseUser): Promise<AuthUser> => {
+    const supabase = getSupabase();
+    if (!supabase) return fromAuthMetadata(authUser);
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("id, first_name, last_name, email, phone, role")
+      .eq("id", authUser.id)
+      .maybeSingle();
+
+    if (error || !data) {
+      if (error) console.error("profile load failed:", error.message);
+      return fromAuthMetadata(authUser);
     }
+    return toAuthUser(data as ProfileRow, authUser.email ?? "");
   }, []);
 
-  const persist = (u: AuthUser, t: string) => {
-    setUser(u);
-    setToken(t);
-    try {
-      localStorage.setItem(USER_KEY, JSON.stringify(u));
-      localStorage.setItem(TOKEN_KEY, t);
-    } catch {/* ignore */}
-  };
-
-  const normalizeUser = (raw: unknown): AuthUser | null => {
-    const maybe = raw as Partial<AuthUser> & Record<string, unknown>;
-    const isRole = (r: any): r is Role => r === "admin" || r === "intern" || r === "guest";
-
-    if (
-      maybe &&
-      typeof maybe._id === "string" &&
-      typeof maybe.firstName === "string" &&
-      typeof maybe.lastName === "string" &&
-      typeof maybe.email === "string" &&
-      typeof maybe.phone === "string"
-    ) {
-      return {
-        _id: maybe._id,
-        firstName: maybe.firstName,
-        lastName: maybe.lastName,
-        email: maybe.email,
-        phone: maybe.phone,
-        role: isRole(maybe.role) ? (maybe.role as Role) : "guest",
-      };
+  // Restore an existing session, then track sign-in/out for the tab's lifetime.
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
     }
-    return null;
-  };
 
-  const signup = async (payload: SignupPayload) => {
-    const res = await authApi.signup(payload);
-    const u = normalizeUser(res.data.user);
-    if (!u) throw new Error("Invalid user payload from signup");
-    persist(u, res.data.token);
-  };
+    let active = true;
 
-  const login = async (email: string, password: string) => {
-    const res = await authApi.login({ email, password });
-    const u = normalizeUser(res.data.user);
-    if (!u) throw new Error("Invalid user payload from login");
-    persist(u, res.data.token);
-  };
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!active) return;
+      setSession(data.session);
+      if (data.session?.user) setUser(await loadProfile(data.session.user));
+      setLoading(false);
+    });
 
-  const logout = () => {
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_event, newSession) => {
+      if (!active) return;
+      setSession(newSession);
+      setUser(newSession?.user ? await loadProfile(newSession.user) : null);
+      setLoading(false);
+    });
+
+    return () => {
+      active = false;
+      sub.subscription.unsubscribe();
+    };
+  }, [loadProfile]);
+
+  const signup = useCallback(async (payload: SignupPayload) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error(configError ?? "Supabase unavailable");
+
+    // `role` is intentionally not sent. The handle_new_user trigger always
+    // writes 'intern'; elevating is a deliberate database action.
+    const { error } = await supabase.auth.signUp({
+      email: payload.email,
+      password: payload.password,
+      options: {
+        data: {
+          first_name: payload.firstName,
+          last_name: payload.lastName,
+          phone: payload.phone,
+        },
+      },
+    });
+
+    if (error) throw new Error(error.message);
+    // onAuthStateChange populates user/session when a session is issued. If
+    // email confirmation is on, no session arrives until the link is clicked.
+  }, [configError]);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const supabase = getSupabase();
+    if (!supabase) throw new Error(configError ?? "Supabase unavailable");
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+  }, [configError]);
+
+  const logout = useCallback(async () => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+    await supabase.auth.signOut();
     setUser(null);
-    setToken(null);
-    try {
-      localStorage.removeItem(USER_KEY);
-      localStorage.removeItem(TOKEN_KEY);
-    } catch {/* ignore */}
-  };
+    setSession(null);
+  }, []);
 
   const refreshMe = useCallback(async () => {
-    if (!token) return;
-    try {
-      const res = await authApi.me();
-      if (res.data.user) {
-        // validate and normalize the user object returned from the API
-        const raw = res.data.user as unknown;
-        const maybe = raw as Partial<AuthUser> & Record<string, unknown>;
-        const isRole = (r: any): r is Role => r === "admin" || r === "intern" || r === "guest";
-
-        if (
-          maybe &&
-          typeof maybe._id === "string" &&
-          typeof maybe.firstName === "string" &&
-          typeof maybe.lastName === "string" &&
-          typeof maybe.email === "string" &&
-          typeof maybe.phone === "string"
-        ) {
-          const normalized: AuthUser = {
-            _id: maybe._id,
-            firstName: maybe.firstName,
-            lastName: maybe.lastName,
-            email: maybe.email,
-            phone: maybe.phone,
-            role: isRole(maybe.role) ? (maybe.role as Role) : "guest",
-          };
-          setUser(normalized);
-          localStorage.setItem(USER_KEY, JSON.stringify(normalized));
-        } else {
-          // malformed user payload — clear auth
-          logout();
-        }
-      }
-    } catch (e) {
-      // token invalid
-      logout();
-    }
-  }, [token]);
-
-  useEffect(() => {
-    // validate token when available
-    if (token) refreshMe();
-  }, [token, refreshMe]);
+    const supabase = getSupabase();
+    if (!supabase) return;
+    const { data } = await supabase.auth.getUser();
+    if (data.user) setUser(await loadProfile(data.user));
+  }, [loadProfile]);
 
   return (
-    <AuthContext.Provider value={{ user, token, loading, signup, login, logout, refreshMe, isAuthenticated: !!user && !!token }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        session,
+        loading,
+        configError,
+        signup,
+        login,
+        logout,
+        refreshMe,
+        isAuthenticated: !!user && !!session,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

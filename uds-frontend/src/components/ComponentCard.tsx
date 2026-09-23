@@ -1,8 +1,9 @@
+"use client";
+
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package, Zap, ChevronRight } from "lucide-react";
-import "../styles/grid-pattern.css";
 
 interface ComponentCardProps {
   name: string;
@@ -13,18 +14,11 @@ interface ComponentCardProps {
   onCheckout: () => void;
 }
 
-export const ComponentCard = ({ 
-  name, 
-  category, 
-  quantity, 
-  available, 
-  status,
-  onCheckout 
-}: ComponentCardProps) => {
+export const ComponentCard = ({ name, category, quantity, available, status, onCheckout }: ComponentCardProps) => {
   const statusConfig = {
-    "available": { label: "Available", class: "status-available" },
+    available: { label: "Available", class: "status-available" },
     "checked-out": { label: "Checked Out", class: "status-checked-out" },
-    "low-stock": { label: "Low Stock", class: "status-low-stock" }
+    "low-stock": { label: "Low Stock", class: "status-low-stock" },
   };
 
   const config = statusConfig[status];
@@ -56,7 +50,7 @@ export const ComponentCard = ({
             </span>
           </div>
         </div>
-        <Button 
+        <Button
           onClick={onCheckout}
           className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
           disabled={available === 0}
