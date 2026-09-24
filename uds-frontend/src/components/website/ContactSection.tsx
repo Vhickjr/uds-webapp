@@ -2,6 +2,7 @@
 
 import { Mail, MapPin, Phone, ExternalLink } from "lucide-react";
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal } from "@/components/motion/Motion";
 
 export default function ContactSection() {
   const { fields } = useSection("contact");
@@ -9,7 +10,7 @@ export default function ContactSection() {
   return (
     <section id="contact" className="py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <Reveal className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Info */}
           <div>
             <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
@@ -146,7 +147,7 @@ export default function ContactSection() {
               </button>
             </form>
           </div>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

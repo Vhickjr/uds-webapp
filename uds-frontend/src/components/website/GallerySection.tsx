@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
 import { cld } from "@/lib/cloudinary";
 
 // Fallback tile background for CMS-added items with no image.
@@ -13,7 +14,8 @@ export default function GallerySection() {
   return (
     <section id="gallery" className="py-24 px-4 bg-card/30">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Innovation Gallery
           </span>
@@ -24,7 +26,8 @@ export default function GallerySection() {
             A glimpse into the workshops, demos, and milestones that make the UNILAG Design Studio
             one of Africa&apos;s most active engineering communities.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
         {/* Masonry-style grid */}
         <div className="columns-2 sm:columns-3 lg:columns-4 gap-4 space-y-4">

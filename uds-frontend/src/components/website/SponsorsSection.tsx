@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Marquee } from "@/components/motion/Motion";
 import { Handshake } from "lucide-react";
 
 const tierConfig = {
@@ -22,7 +23,7 @@ export default function SponsorsSection() {
     const cfg = tierConfig[partner.tier as keyof typeof tierConfig];
     return (
       <div
-        className="rounded-xl border border-border bg-card px-5 py-4 flex flex-col items-center justify-center text-center gap-1 hover:border-primary/40 transition-colors"
+        className="w-[210px] shrink-0 rounded-xl border border-border bg-card px-5 py-4 flex flex-col items-center justify-center text-center gap-1 hover:border-primary/40 transition-colors"
         style={{ borderTopColor: cfg.color, borderTopWidth: 2 }}
       >
         <div className={`font-bold text-foreground ${cfg.size}`}>{partner.name}</div>
@@ -34,7 +35,8 @@ export default function SponsorsSection() {
   return (
     <section id="sponsors" className="py-24 px-4 bg-card/30">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Partnerships & Sponsors
           </span>
@@ -45,7 +47,8 @@ export default function SponsorsSection() {
             Our partners provide funding, equipment, mentorship, and real-world project
             opportunities to Design Studio students and researchers.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
         {/* Platinum */}
         <div className="mb-8">
@@ -81,9 +84,9 @@ export default function SponsorsSection() {
               Silver Partners
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <Marquee speed={46}>
             {silver.map((p) => <PartnerBadge key={p.name} partner={p} />)}
-          </div>
+          </Marquee>
         </div>
 
         {/* Community */}
@@ -94,9 +97,9 @@ export default function SponsorsSection() {
               Community Partners
             </span>
           </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <Marquee speed={38}>
             {community.map((p) => <PartnerBadge key={p.name} partner={p} />)}
-          </div>
+          </Marquee>
         </div>
 
         <div className="mt-12 p-6 rounded-2xl border border-dashed border-primary/40 text-center">

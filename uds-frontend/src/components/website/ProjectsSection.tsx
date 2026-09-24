@@ -1,6 +1,8 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
+import { ProjectVisual } from "@/components/website/ProjectVisual";
 
 // Fallback accent for items added through the CMS, which carry no colour.
 const ACCENT = "hsl(9 55% 32%)";
@@ -13,29 +15,33 @@ export default function ProjectsSection() {
     <section id="projects" className="py-24 px-4">
       <div className="max-w-7xl mx-auto">
         {/* Header */}
-        <div className="mb-14 max-w-2xl">
+        <Reveal className="mb-14 max-w-2xl">
+          <div>
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Innovation Projects
           </span>
           <h2 className="text-4xl font-black text-foreground mb-4">
             {fields.heading}
           </h2>
-          <p className="text-muted-foreground text-lg">
-            Our students tackle challenges across agriculture, health, energy, and infrastructure —
-            using the studio&apos;s resources to go from idea to working prototype.
-          </p>
-        </div>
+            <p className="text-muted-foreground text-lg">
+              Our students tackle challenges across agriculture, health, energy, and infrastructure —
+              using the studio&apos;s resources to go from idea to working prototype.
+            </p>
+          </div>
+        </Reveal>
 
         {/* Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Stagger className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
+            <StaggerItem key={project.title} className="h-full">
             <div
-              key={project.title}
-              className="group relative rounded-2xl border border-border bg-card p-6 hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
+              className="group relative flex h-full flex-col rounded-2xl border border-border bg-card hover:border-primary/50 transition-all duration-300 hover:-translate-y-1 hover:shadow-xl overflow-hidden"
             >
+              <ProjectVisual title={project.title} image={project.image} className="h-40 w-full shrink-0" />
+              <div className="p-6 flex flex-col flex-1">
               {/* Accent line */}
               <div
-                className="absolute top-0 left-0 right-0 h-0.5"
+                className="absolute top-0 left-0 right-0 h-0.5 z-10"
                 style={{ background: project.color || ACCENT }}
               />
 
@@ -75,12 +81,14 @@ export default function ProjectsSection() {
                     {tag}
                   </span>
                 ))}
+                </div>
               </div>
             </div>
+            </StaggerItem>
           ))}
-        </div>
+        </Stagger>
 
-        <div className="mt-10 text-center">
+        <Reveal className="mt-10 text-center">
           <a
             href="#contact"
             className="inline-flex items-center gap-2 text-primary hover:underline text-sm font-medium"
@@ -88,7 +96,7 @@ export default function ProjectsSection() {
             Interested in joining a project? Get in touch
             <ExternalLink className="h-3.5 w-3.5" />
           </a>
-        </div>
+        </Reveal>
       </div>
     </section>
   );

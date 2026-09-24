@@ -36,8 +36,23 @@ export const canReviewBookings = isAdmin;
  */
 export const canEditContent = isAdmin;
 
-/** Site-wide administration reserved for super admins (e.g. user management). */
+/** Site-wide administration reserved for super admins. */
 export const canManageSite = isSuperAdmin;
 
-/** Everyone signed in can request a space. */
-export const canBookSpaces = (role?: Role | null): boolean => !!role;
+/** Assigning roles to other accounts. Super admin only, enforced in the DB too. */
+export const canManageUsers = isSuperAdmin;
+
+/**
+ * A new account signs up as `guest` and stays read-only until a super admin
+ * promotes it. Borrowing and booking both require that promotion — mirrored
+ * by can_transact() in the database, which is the real gate.
+ */
+export const canTransact = (role?: Role | null): boolean =>
+  role === "intern" || role === "admin" || role === "superadmin";
+
+export const canBorrow = canTransact;
+export const canBookSpaces = canTransact;
+
+/** Roles a super admin can assign from the UI. Superadmin is deliberately
+ *  absent — granting that stays a deliberate SQL action. */
+export const ASSIGNABLE_ROLES: Role[] = ["guest", "intern", "admin"];

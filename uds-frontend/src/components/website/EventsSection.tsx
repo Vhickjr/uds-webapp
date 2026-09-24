@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
 
 // Fallback accent for items added through the CMS, which carry no colour.
 const ACCENT = "hsl(41 87% 44%)";
@@ -12,7 +13,8 @@ export default function EventsSection() {
   return (
     <section id="events" className="py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Events & Workshops
           </span>
@@ -23,9 +25,10 @@ export default function EventsSection() {
             From beginner workshops to industry hackathons, our events calendar keeps the studio
             buzzing with activity year-round.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Reveal delay={0.1} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {events.map((event) => (
             <div
               key={event.title}
@@ -83,7 +86,7 @@ export default function EventsSection() {
               </a>
             </div>
           ))}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -1,6 +1,6 @@
 import { Suspense } from "react";
 import { RequireAuth } from "@/components/RequireAuth";
-import { IndexPage } from "@/components/IndexPage";
+import { DashboardShell } from "@/components/DashboardShell";
 
 export default function DashboardPage() {
   return (
@@ -12,7 +12,7 @@ export default function DashboardPage() {
           </div>
         }
       >
-        <IndexPage />
+        <DashboardShell />
       </Suspense>
     </RequireAuth>
   );

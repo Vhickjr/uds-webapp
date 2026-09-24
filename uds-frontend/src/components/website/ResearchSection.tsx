@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
 import { resolveIcon } from "@/lib/site-content";
 
 export default function ResearchSection() {
@@ -9,7 +10,8 @@ export default function ResearchSection() {
   return (
     <section id="research" className="py-24 px-4 bg-card/30">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Research Activities
           </span>
@@ -20,9 +22,10 @@ export default function ResearchSection() {
             Our research groups work at the intersection of technology and societal need, producing
             work published in international journals and presented at global conferences.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Reveal delay={0.1} className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {groups.map((group) => {
             const Icon = resolveIcon(group.icon);
             return (
@@ -57,7 +60,7 @@ export default function ResearchSection() {
               </div>
             );
           })}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem, CountUp } from "@/components/motion/Motion";
 import { ArrowRight, CalendarCheck } from "lucide-react";
 
 export default function HeroSection() {
@@ -54,29 +55,29 @@ export default function HeroSection() {
           </div>
 
           {/* Stats block sits where the live site places its hero image */}
-          <div className="grid grid-cols-2 gap-4">
+          <Stagger className="grid grid-cols-2 gap-4">
             {stats.map((stat) => (
-              <div
+              <StaggerItem
                 key={stat.label}
                 className="rounded-2xl bg-white/[0.06] border border-brand-cream/15 p-5 backdrop-blur-sm"
               >
                 <div className="font-display text-3xl font-bold text-brand-gold mb-1">
-                  {stat.value}
+                  <CountUp value={stat.value} />
                 </div>
                 <div className="text-xs text-[#e6e6e6]">{stat.label}</div>
-              </div>
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         </div>
       </div>
 
       {/* Cream "about" band, mirroring the live site's section directly under the hero */}
       <div id="about" className="max-w-[1200px] mx-auto px-4 sm:px-0">
-        <div className="uds-panel-cream px-6 sm:px-12 py-12 sm:py-14 text-center">
+        <Reveal className="uds-panel-cream px-6 sm:px-12 py-12 sm:py-14 text-center">
           <p className="font-display mx-auto max-w-[1000px] text-lg sm:text-xl leading-[1.7] text-brand-oxblood">
             {fields.aboutText}
           </p>
-        </div>
+        </Reveal>
       </div>
     </section>
   );
