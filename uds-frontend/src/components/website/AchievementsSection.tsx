@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
 import { resolveIcon } from "@/lib/site-content";
 
 const categoryColor: Record<string, string> = {
@@ -16,7 +17,8 @@ export default function AchievementsSection() {
   return (
     <section id="achievements" className="py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Student Achievements
           </span>
@@ -27,9 +29,10 @@ export default function AchievementsSection() {
             Design Studio students consistently punch above their weight, winning competitions,
             publishing research, and securing grants that put UNILAG on the global engineering map.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <Reveal delay={0.1} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {achievements.map((item) => {
             const Icon = resolveIcon(item.icon);
             const color = categoryColor[item.category] || "hsl(9 55% 32%)";
@@ -64,7 +67,7 @@ export default function AchievementsSection() {
               </div>
             );
           })}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

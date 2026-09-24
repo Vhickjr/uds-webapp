@@ -6,7 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Upload, X, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { uploadToCloudinary, isCloudinaryConfigured, cld } from "@/lib/cloudinary";
+import {
+  uploadToCloudinary, isCloudinaryConfigured, cld,
+  deleteFromCloudinary, publicIdFromUrl,
+} from "@/lib/cloudinary";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface Props {
   value: string;
@@ -15,14 +19,32 @@ interface Props {
 }
 
 export const ImageUploadField = ({ value, onChange, folder }: Props) => {
+  const { session } = useAuth();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
 
+  /**
+   * Removes the old asset from Cloudinary when it is replaced or cleared, so
+   * edits do not leave orphans behind. Best-effort: a failed cleanup must not
+   * block the content change itself.
+   */
+  const discard = async (url: string) => {
+    const token = session?.access_token;
+    if (!token || !publicIdFromUrl(url)) return;
+    try {
+      await deleteFromCloudinary(url, token);
+    } catch (err) {
+      console.warn("Cloudinary cleanup failed:", err);
+    }
+  };
+
   const handleFile = async (file: File) => {
     setUploading(true);
+    const replaced = value;
     try {
       const asset = await uploadToCloudinary(file, folder);
       onChange(asset.url);
+      if (replaced) void discard(replaced);
       toast.success("Image uploaded");
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Upload failed");
@@ -45,7 +67,11 @@ export const ImageUploadField = ({ value, onChange, folder }: Props) => {
           />
           <button
             type="button"
-            onClick={() => onChange("")}
+            onClick={() => {
+              const removed = value;
+              onChange("");
+              void discard(removed);
+            }}
             aria-label="Remove image"
             className="absolute top-2 right-2 rounded-full bg-background/90 p-1.5 hover:bg-background"
           >

@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { useComponents } from "@/contexts/ComponentContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 type Idea = {
   id: string;
@@ -17,6 +18,7 @@ const SAVED_KEY = "uds_savedIdeas";
 
 export const ProjectIdeaGenerator = () => {
   const { components } = useComponents();
+  const { session } = useAuth();
   const { toast } = useToast();
 
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
@@ -60,7 +62,12 @@ export const ProjectIdeaGenerator = () => {
     try {
       const res = await fetch("/api/llm/generate", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
         body: JSON.stringify(payload),
       });
       if (res.ok) {
@@ -94,8 +101,23 @@ export const ProjectIdeaGenerator = () => {
     try {
       const res = await fetch("/api/llm/guidance", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ idea }),
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
+        },
+        body: JSON.stringify({
+          idea: {
+            title: idea.title,
+            summary: idea.summary,
+            skillLevel: idea.skillLevel,
+            // The server reasons about part names, not opaque inventory ids.
+            componentNames: idea.requiredComponents
+              .map((id) => inventoryOptions.find((c) => c.id === id)?.name)
+              .filter(Boolean),
+          },
+        }),
       });
       if (res.ok) {
         const data = await res.json();

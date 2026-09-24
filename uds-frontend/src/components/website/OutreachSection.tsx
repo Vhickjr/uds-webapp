@@ -1,6 +1,7 @@
 "use client";
 
 import { useSection } from "@/contexts/SiteContentContext";
+import { Reveal, Stagger, StaggerItem } from "@/components/motion/Motion";
 import { resolveIcon } from "@/lib/site-content";
 
 export default function OutreachSection() {
@@ -9,7 +10,8 @@ export default function OutreachSection() {
   return (
     <section id="outreach" className="py-24 px-4">
       <div className="max-w-7xl mx-auto">
-        <div className="mb-14 max-w-2xl">
+        <Reveal>
+          <div className="mb-14 max-w-2xl">
           <span className="text-xs font-semibold uppercase tracking-widest text-primary mb-3 block">
             Outreach Programs
           </span>
@@ -20,9 +22,10 @@ export default function OutreachSection() {
             We believe technology should serve everyone. Our outreach programmes extend the
             studio&apos;s expertise to schools, communities, and partner institutions across Africa.
           </p>
-        </div>
+          </div>
+        </Reveal>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+        <Reveal delay={0.1} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {programs.map((program) => {
             const Icon = resolveIcon(program.icon);
             return (
@@ -50,7 +53,7 @@ export default function OutreachSection() {
               </div>
             );
           })}
-        </div>
+        </Reveal>
       </div>
     </section>
   );

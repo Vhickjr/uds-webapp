@@ -12,9 +12,11 @@ interface ComponentCardProps {
   available: number;
   status: "available" | "checked-out" | "low-stock";
   onCheckout: () => void;
+  /** Guests browse read-only, so the borrow action is hidden for them. */
+  canBorrow?: boolean;
 }
 
-export const ComponentCard = ({ name, category, quantity, available, status, onCheckout }: ComponentCardProps) => {
+export const ComponentCard = ({ name, category, quantity, available, status, onCheckout, canBorrow = true }: ComponentCardProps) => {
   const statusConfig = {
     available: { label: "Available", class: "status-available" },
     "checked-out": { label: "Checked Out", class: "status-checked-out" },
@@ -50,14 +52,16 @@ export const ComponentCard = ({ name, category, quantity, available, status, onC
             </span>
           </div>
         </div>
-        <Button
-          onClick={onCheckout}
-          className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
-          disabled={available === 0}
-        >
-          Checkout Component
-          <ChevronRight className="ml-2 h-4 w-4" />
-        </Button>
+        {canBorrow && (
+          <Button
+            onClick={onCheckout}
+            className="w-full bg-primary hover:bg-primary/90 text-primary-foreground"
+            disabled={available === 0}
+          >
+            Checkout Component
+            <ChevronRight className="ml-2 h-4 w-4" />
+          </Button>
+        )}
       </CardContent>
     </Card>
   );

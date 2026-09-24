@@ -9,6 +9,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CheckoutForm } from "./CheckoutForm";
 import { useComponents, Component } from "@/contexts/ComponentContext";
 import QRScanner from "./QRScanner";
+import { useAuth } from "@/contexts/AuthContext";
+import { canBorrow as canBorrowRole } from "@/lib/permissions";
 import { Button } from "@/components/ui/button";
 
 export const InventoryList = () => {
@@ -26,6 +28,9 @@ export const InventoryList = () => {
     return matchesSearch && matchesCategory;
   });
 
+  const { user } = useAuth();
+  const mayBorrow = canBorrowRole(user?.role);
+
   const handleCheckout = (component: Component) => {
     setSelectedComponent(component);
     setDialogOpen(true);
@@ -39,17 +44,19 @@ export const InventoryList = () => {
             <h2 className="text-2xl font-bold text-foreground mb-2">Component Inventory</h2>
             <p className="text-muted-foreground">Browse and manage electrical components</p>
           </div>
-          <Dialog>
-            <DialogTrigger asChild>
-              <Button className="bg-primary text-primary-foreground">Scan QR</Button>
-            </DialogTrigger>
-            <DialogContent className="bg-card border-border">
-              <DialogHeader>
-                <DialogTitle>Scan Component QR</DialogTitle>
-              </DialogHeader>
-              <QRScanner />
-            </DialogContent>
-          </Dialog>
+          {mayBorrow && (
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button className="bg-primary text-primary-foreground">Scan QR</Button>
+              </DialogTrigger>
+              <DialogContent className="bg-card border-border">
+                <DialogHeader>
+                  <DialogTitle>Scan Component QR</DialogTitle>
+                </DialogHeader>
+                <QRScanner />
+              </DialogContent>
+            </Dialog>
+          )}
         </div>
       </div>
 
@@ -79,7 +86,12 @@ export const InventoryList = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredComponents.map((component) => (
-          <ComponentCard key={component.id} {...component} onCheckout={() => handleCheckout(component)} />
+          <ComponentCard
+            key={component.id}
+            {...component}
+            canBorrow={mayBorrow}
+            onCheckout={() => handleCheckout(component)}
+          />
         ))}
       </div>
 

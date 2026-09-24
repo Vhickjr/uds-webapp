@@ -77,3 +77,64 @@ export const cld = (url: string, transform = "f_auto,q_auto"): string => {
   if (!url.includes("/upload/")) return url;
   return url.replace("/upload/", `/upload/${transform}/`);
 };
+
+/**
+ * Extracts the Cloudinary public_id from a delivery URL, so an asset can be
+ * deleted without storing its id separately.
+ *
+ *   https://res.cloudinary.com/<cloud>/image/upload/v1790222204/uds-website/abc.png
+ *                                                              ^^^^^^^^^^^^^^^^^^ -> "uds-website/abc"
+ *
+ * Any transformation segment between /upload/ and the version is dropped, and
+ * the trailing extension is removed. Returns null for non-Cloudinary URLs.
+ */
+export const publicIdFromUrl = (url: string): string | null => {
+  if (!url.includes("res.cloudinary.com") || !url.includes("/upload/")) return null;
+
+  let path = url.split("/upload/")[1];
+  if (!path) return null;
+
+  // Drop a leading transformation segment (contains "_", e.g. f_auto,q_auto,w_400).
+  const segments = path.split("/");
+  if (segments.length > 1 && /(^|,)[a-z]{1,3}_/.test(segments[0])) segments.shift();
+
+  // Drop the version segment (v1234567890).
+  if (/^v\d+$/.test(segments[0])) segments.shift();
+
+  path = segments.join("/");
+  if (!path) return null;
+
+  return path.replace(/\.[^./]+$/, "");
+};
+
+/**
+ * Deletes an asset. Routed through the `cloudinary-admin` Edge Function because
+ * destroying requires the API secret, which must stay server-side; the function
+ * also re-checks that the caller is an admin.
+ */
+export const deleteFromCloudinary = async (
+  url: string,
+  accessToken: string
+): Promise<void> => {
+  const publicId = publicIdFromUrl(url);
+  if (!publicId) return; // not a Cloudinary asset — nothing to clean up
+
+  const base = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  if (!base) throw new CloudinaryError("Supabase URL is not configured");
+
+  const res = await fetch(`${base}/functions/v1/cloudinary-admin`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify({ action: "delete", publicId }),
+  });
+
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    throw new CloudinaryError(
+      (data as { error?: string } | null)?.error ?? `Delete failed (HTTP ${res.status})`
+    );
+  }
+};
